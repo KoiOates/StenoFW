@@ -16,7 +16,8 @@
  *
  * Copyright 2014 Emanuele Caruso. See LICENSE.txt for details.
  */
- 
+#include <Keyboard.h>
+
 #define ROWS 5
 #define COLS 6
 
@@ -50,6 +51,7 @@ int ledIntensity = 1; // Min 0 - Max 255
 #define TXBOLT 1
 #define NKRO 2
 int protocol = NKRO;
+int newlineNKRO = false;
 
 // This is called when the keyboard is connected
 void setup() {
@@ -190,8 +192,12 @@ void sendChordNkro() {
     }
   }
   Keyboard.releaseAll();
+  if (newlineNKRO) {
+    Keyboard.press(KEY_RETURN);
+    Keyboard.release(KEY_RETURN);
+  }
 }
- 
+
 // Send current chord over serial using the Gemini protocol. 
 void sendChordGemini() {
   // Initialize chord bytes
@@ -397,6 +403,9 @@ void sendChord() {
 //
 // Current functions:
 //    PH-PB   ->   Set NKRO Keyboard emulation mode
+//    PH-R   ->   Same as NKRO mode, but adds a carriage return
+//                after each stroke as a quick fix for testing
+//                Ploverducken experiment.
 //    PH-G   ->   Set Gemini PR protocol mode
 //    PH-B   ->   Set TX Bolt protocol mode
 void fn1() {
@@ -405,14 +414,24 @@ void fn1() {
     // "-PB" -> NKRO Keyboard
     if (currentChord[3][1] && currentChord[4][1]) {
       protocol = NKRO;
+      newlineNKRO = false;
+      ledBlink();
     }
     // "-G" -> Gemini PR
     else if (currentChord[4][2]) {
       protocol = GEMINI;
+      ledBlink();
     }
     // "-B" -> TX Bolt
     else if (currentChord[4][1]) {
       protocol = TXBOLT;
+      ledBlink();
+    }
+    // "-R" -> NKRO, append Enter key to end of each stroke
+    else if (currentChord[4][0]) {
+      protocol = NKRO;
+      newlineNKRO = true;
+      ledBlink();
     }
   }
 }
@@ -456,3 +475,14 @@ void fn1fn2() {
     }
   }
 }
+
+void ledBlink() {
+  for (int i=0; i < 4; i++) {
+    analogWrite(ledPin, 2);
+    delay(50);
+    analogWrite(ledPin, 250);
+    delay(80);
+  }
+  analogWrite(ledPin, ledIntensity);
+}
+
